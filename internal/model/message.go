@@ -7,6 +7,7 @@ import (
 	"time"
 	
 	"github.com/sjzar/chatlog/pkg/util"
+	"github.com/spf13/cast"
 )
 
 var Debug = false
@@ -226,6 +227,8 @@ func (m *Message) ParseMediaInfo(data string) error {
 				break
 			}
 			subMsg := &Message{
+				//Seq:       ,
+				ServerID:   cast.ToInt64(msg.App.ReferMsg.SvrID),
 				Type:       int64(msg.App.ReferMsg.Type),
 				Time:       time.Unix(msg.App.ReferMsg.CreateTime, 0),
 				Sender:     msg.App.ReferMsg.ChatUsr,
