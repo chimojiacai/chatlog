@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
+	
 	"github.com/sjzar/chatlog/internal/model/wxproto"
 	"github.com/sjzar/chatlog/pkg/util/zstd"
 	"google.golang.org/protobuf/proto"
@@ -45,9 +45,10 @@ type MessageV4 struct {
 }
 
 func (m *MessageV4) Wrap(talker string) *Message {
-
+	
 	_m := &Message{
 		Seq:        m.SortSeq,
+		ServerID:   m.ServerID,
 		Time:       time.Unix(m.CreateTime, 0),
 		Talker:     talker,
 		IsChatRoom: strings.HasSuffix(talker, "@chatroom"),
@@ -56,10 +57,10 @@ func (m *MessageV4) Wrap(talker string) *Message {
 		Contents:   make(map[string]interface{}),
 		Version:    WeChatV4,
 	}
-
+	
 	// FIXME 后续通过 UserName 判断是否是自己发送的消息，目前可能不准确
 	_m.IsSelf = m.Status == 2 || (!_m.IsChatRoom && talker != m.UserName)
-
+	
 	content := ""
 	if bytes.HasPrefix(m.MessageContent, []byte{0x28, 0xb5, 0x2f, 0xfd}) {
 		if b, err := zstd.Decompress(m.MessageContent); err == nil {
@@ -68,7 +69,7 @@ func (m *MessageV4) Wrap(talker string) *Message {
 	} else {
 		content = string(m.MessageContent)
 	}
-
+	
 	if _m.IsChatRoom {
 		split := strings.SplitN(content, ":\n", 2)
 		if len(split) == 2 {
@@ -76,14 +77,14 @@ func (m *MessageV4) Wrap(talker string) *Message {
 			content = split[1]
 		}
 	}
-
+	
 	_m.ParseMediaInfo(content)
-
+	
 	// 语音消息
 	if _m.Type == 34 {
 		_m.Contents["voice"] = fmt.Sprint(m.ServerID)
 	}
-
+	
 	if len(m.PackedInfoData) != 0 {
 		if packedInfo := ParsePackedInfo(m.PackedInfoData); packedInfo != nil {
 			// FIXME 尝试解决 v4 版本 xml 数据无法匹配到 hardlink 记录的问题
@@ -97,7 +98,7 @@ func (m *MessageV4) Wrap(talker string) *Message {
 			}
 		}
 	}
-
+	
 	return _m
 }
 

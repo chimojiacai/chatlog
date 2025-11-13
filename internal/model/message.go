@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
+	
 	"github.com/sjzar/chatlog/pkg/util"
 )
 
@@ -20,31 +20,31 @@ const (
 const (
 	// MessageTypeText 文本
 	MessageTypeText = 1
-
+	
 	// MessageTypeImage 图片
 	MessageTypeImage = 3
-
+	
 	// MessageTypeVoice 语音
 	MessageTypeVoice = 34
-
+	
 	// MessageTypeCard 名片
 	MessageTypeCard = 42
-
+	
 	// MessageTypeVideo 视频
 	MessageTypeVideo = 43
-
+	
 	// MessageTypeAnimation 动画表情
 	MessageTypeAnimation = 47
-
+	
 	// MessageTypeLocation 位置
 	MessageTypeLocation = 48
-
+	
 	// MessageTypeShare 分享
 	MessageTypeShare = 49
-
+	
 	// MessageTypeVOIP 语音通话
 	MessageTypeVOIP = 50
-
+	
 	// MessageTypeSystem 系统
 	MessageTypeSystem = 10000
 )
@@ -52,55 +52,55 @@ const (
 const (
 	// MessageSubTypeText 文本
 	MessageSubTypeText = 1
-
+	
 	// MessageSubTypeLink 链接分享
 	MessageSubTypeLink = 4
-
+	
 	// MessageSubTypeLink2 链接分享
 	MessageSubTypeLink2 = 5
-
+	
 	// MessageSubTypeFile 文件
 	MessageSubTypeFile = 6
-
+	
 	// MessageSubTypeGIF 动图
 	MessageSubTypeGIF = 8
-
+	
 	// MessageSubTypeMergeForward 合并转发
 	MessageSubTypeMergeForward = 19
-
+	
 	// MessageSubTypeNote 笔记
 	MessageSubTypeNote = 24
-
+	
 	// MessageSubTypeMiniProgram 小程序
 	MessageSubTypeMiniProgram = 33
-
+	
 	// MessageSubTypeMiniProgram2 小程序
 	MessageSubTypeMiniProgram2 = 36
-
+	
 	// MessageSubTypeChannel 视频号
 	MessageSubTypeChannel = 51
-
+	
 	// MessageSubTypeQuote 引用
 	MessageSubTypeQuote = 57
-
+	
 	// MessageSubTypePat 拍一拍
 	MessageSubTypePat = 62
-
+	
 	// MessageSubTypeChannelLive 视频号直播
 	MessageSubTypeChannelLive = 63
-
+	
 	// MessageSubTypeChatRoomNotice 群公告
 	MessageSubTypeChatRoomNotice = 87
-
+	
 	// MessageSubTypeMusic 音乐
 	MessageSubTypeMusic = 92
-
+	
 	// MessageSubTypePay 转账
 	MessageSubTypePay = 2000
-
+	
 	// MessageSubTypeRedEnvelope 红包
 	MessageSubTypeRedEnvelope = 2001
-
+	
 	// MessageSubTypeRedEnvelopeCover 红包封面
 	MessageSubTypeRedEnvelopeCover = 2003
 )
@@ -108,6 +108,7 @@ const (
 type Message struct {
 	Version    string                 `json:"-"`                  // 消息版本，内部判断
 	Seq        int64                  `json:"seq"`                // 消息序号，10位时间戳 + 3位序号
+	ServerID   int64                  `json:"serverID"`           // 消息唯一标识，用于去重
 	Time       time.Time              `json:"time"`               // 消息创建时间，10位时间戳
 	Talker     string                 `json:"talker"`             // 聊天对象，微信 ID or 群 ID
 	TalkerName string                 `json:"talkerName"`         // 聊天对象名称
@@ -119,21 +120,21 @@ type Message struct {
 	SubType    int64                  `json:"subType"`            // 消息子类型
 	Content    string                 `json:"content"`            // 消息内容，文字聊天内容
 	Contents   map[string]interface{} `json:"contents,omitempty"` // 消息内容，多媒体消息，采用更灵活的记录方式
-
+	
 	// Debug Info
 	MediaMsg *MediaMsg `json:"mediaMsg,omitempty"` // 原始多媒体消息，XML 格式
 	SysMsg   *SysMsg   `json:"sysMsg,omitempty"`   // 原始系统消息，XML 格式
 }
 
 func (m *Message) ParseMediaInfo(data string) error {
-
+	
 	m.Type, m.SubType = util.SplitInt64ToTwoInt32(m.Type)
-
+	
 	if m.Type == 1 {
 		m.Content = data
 		return nil
 	}
-
+	
 	if m.Type == MessageTypeSystem {
 		m.Sender = "系统消息"
 		m.SenderName = ""
@@ -148,21 +149,21 @@ func (m *Message) ParseMediaInfo(data string) error {
 		m.Content = sysMsg.String()
 		return nil
 	}
-
+	
 	var msg MediaMsg
 	err := xml.Unmarshal([]byte(data), &msg)
 	if err != nil {
 		return err
 	}
-
+	
 	if m.Contents == nil {
 		m.Contents = make(map[string]interface{})
 	}
-
+	
 	if Debug {
 		m.MediaMsg = &msg
 	}
-
+	
 	switch m.Type {
 	case MessageTypeImage:
 		m.Contents["md5"] = msg.Image.MD5
@@ -285,7 +286,7 @@ func (m *Message) ParseMediaInfo(data string) error {
 			m.Content = fmt.Sprintf("[转账|%s%s]%s", _type, msg.App.WCPayInfo.FeeDesc, payMemo)
 		}
 	}
-
+	
 	return nil
 }
 
@@ -297,15 +298,15 @@ func (m *Message) SetContent(key string, value interface{}) {
 }
 
 func (m *Message) PlainText(showChatRoom bool, timeFormat string, host string) string {
-
+	
 	if timeFormat == "" {
 		timeFormat = "01-02 15:04:05"
 	}
-
+	
 	m.SetContent("host", host)
-
+	
 	buf := strings.Builder{}
-
+	
 	sender := m.Sender
 	if m.IsSelf {
 		sender = "我"
@@ -319,7 +320,7 @@ func (m *Message) PlainText(showChatRoom bool, timeFormat string, host string) s
 		buf.WriteString(sender)
 	}
 	buf.WriteString(" ")
-
+	
 	if m.IsChatRoom && showChatRoom {
 		buf.WriteString("[")
 		if m.TalkerName != "" {
@@ -332,13 +333,13 @@ func (m *Message) PlainText(showChatRoom bool, timeFormat string, host string) s
 		}
 		buf.WriteString("] ")
 	}
-
+	
 	buf.WriteString(m.Time.Format(timeFormat))
 	buf.WriteString("\n")
-
+	
 	buf.WriteString(m.PlainTextContent())
 	buf.WriteString("\n")
-
+	
 	return buf.String()
 }
 
